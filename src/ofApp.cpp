@@ -83,7 +83,7 @@ void setupInit() {
     tvpScene = SCENE_INIT;
     ofResetElapsedTimeCounter();
     // screen
-    ofSetWindowTitle("Tiny View Plus");
+    ofSetWindowTitle("TV++");
     ofBackground(0, 0, 0);
     ofSetVerticalSync(VERTICAL_SYNC);
     ofSetFrameRate(FRAME_RATE);
@@ -398,7 +398,7 @@ void setupMain() {
         speakAny("jp", "タイニービュープラスへようこそ。");
 #endif /* TARGET_WIN32 TARGET_LINUX */
     } else {
-        speakAny("en", "Welcome to Tiny View Plus.");
+        speakAny("en", "Welcome to TV++");
     }
     // debug
     if (DEBUG_ENABLED == true) {
@@ -1322,6 +1322,12 @@ void keyPressedOverlayNone(int key) {
             pushLapRecord(3, ofGetElapsedTimef());
         } else if (key == '8') {
             pushLapRecord(4, ofGetElapsedTimef());
+        } else if (key == '0') {
+            speakAny("en", "Pilots,  are you ready?");
+        } else if (key == '9') {
+            speakAny("en", "Pilots, please land now!");
+        } else if (key == 'm' || key == 'M') {
+            speakAnyThroughUserInput();
         } else if (key == 'h' || key == 'H') {
             setOverlayMode(OVLMODE_HELP);
         } else if (key == 'i' || key == 'I') {
@@ -1702,6 +1708,22 @@ void changeCameraLabel(int camid) {
         camView[camid - 1].labelString = str;
         savePilotsFile();
         autoSelectCameraIcon(camid, str);
+    }
+#ifdef TARGET_WIN32
+    ofSetFullscreen(fullscreenEnabled);
+#endif/* TARGET_WIN32 */
+}
+
+void speakAnyThroughUserInput() {
+    string str;
+#ifdef TARGET_WIN32
+    activateCursor();
+    setOverlayMode(OVLMODE_NONE);
+    str = ansiToUtf8(str);
+#endif /* TARGET_WIN32 */
+    str = ofTrim(ofSystemTextBoxDialog("A message to broadcast", str));
+    if (str.length() > 0) {
+        speakAny("en", str);
     }
 #ifdef TARGET_WIN32
     ofSetFullscreen(fullscreenEnabled);
@@ -3701,6 +3723,30 @@ void drawHelpBody(int line) {
     drawStringBlock(&myFontOvlayP, "Clear Race Result", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "C", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
+    // Speak a custom message
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Send a message to pilots", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "m", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
+    // Speak a predefined message
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Ask pilots are they reaady to race", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "0", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
+    // Speak a custom message
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Ask pilots to land", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "9", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
 }
 

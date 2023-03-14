@@ -13,9 +13,9 @@
 /* ---------- definitions ---------- */
 
 // system
-#define APP_VER         "v0.9.32"
+#define APP_VER         "v2.0.1"
 #define DEBUG_ENABLED   false
-#define HELP_LINES      35  // must be <= OVLTXT_LINES
+#define HELP_LINES      38  // must be <= OVLTXT_LINES
 #define SCENE_INIT      0
 #define SCENE_CAMS      1
 #define SCENE_MAIN      2
@@ -289,6 +289,7 @@ public:
 
 // -- splash --
 void setupInit();
+void speakAnyThroughUserInput();
 void loadWallImage(string);
 void loadSettingsFile();
 void saveSettingsFile();
