@@ -145,7 +145,7 @@ void setupInit() {
     elapsedTime = 0;
     raceResultTimer = -1;
     // QR reader
-    qrEnabled = false;
+    qrEnabled = true;
     // speech
     autoSelectSpeechLang();
     // extra camera
@@ -2619,6 +2619,7 @@ void stopRace(bool appexit) {
         raceResultTimer = ARAP_RSLT_DELAY;
     }
     fwriteRaceResult();
+    qrEnabled = true;
 }
 
 //--------------------------------------------------------------
