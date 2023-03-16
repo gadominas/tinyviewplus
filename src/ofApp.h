@@ -178,6 +178,8 @@
 
 /* ---------- classes ---------- */
 
+
+
 class tvpCamView {
 public:
     // camera

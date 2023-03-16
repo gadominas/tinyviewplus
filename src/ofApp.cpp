@@ -1,6 +1,7 @@
 // charcter encoding is UTF-8
 
 #include "ofApp.h"
+#include "tvppHeatService.h"
 #ifdef TARGET_WIN32
 #include <sapi.h>
 #include <atlcomcli.h>
@@ -936,8 +937,16 @@ void drawCameraLapTime(int idx, bool issub) {
                                  camView[i].lapPosX, camView[i].lapPosY + offset);
         }
         float blap = getBestLap(i);
+        float heatBlap = getBestHeatLapTime(camView[i].labelString);
+        float conFastedTwoLaps = getFastedConsecutiveLaps(camView[i].labelString, minLapTime);
+        
         if (blap != 0) {
-            sout = "BestLap: " + getLapStr(blap) + "s";
+            if( heatBlap == BEST_LAP_REST_VALUE ) {
+                sout = "BestLap: " + getLapStr(blap) + "s";
+            } else {
+                sout = "BestLap: " + getLapStr(blap) + "s (" + getLapStr(heatBlap) + "s / " + getLapStr(conFastedTwoLaps) + "s)";
+            }
+            
             if (issub) {
                 drawStringWithShadow(&myFontLapSub, myColorWhite, myColorBGMiddle, sout,
                                      camView[i].lapPosX + offset,
@@ -1351,6 +1360,11 @@ void keyPressedOverlayNone(int key) {
             if (raceStarted == false) {
                 initRaceVars();
                 setOverlayMessage("Cleared race result");
+            }
+        } else if (key == 'k' || key == 'K') {
+            if (raceStarted == false) {
+                clearHeatResults();
+                setOverlayMessage("Cleared heat result");
             }
         } else if (key == 'a' || key == 'A') {
             toggleARLap();
@@ -2619,7 +2633,9 @@ void stopRace(bool appexit) {
         raceResultTimer = ARAP_RSLT_DELAY;
     }
     fwriteRaceResult();
-    qrEnabled = true;
+    updateHeatStats(camView, cameraNum, minLapTime, useStartGate);
+    fwriteRaceHeatResult();
+    toggleQrReader();
 }
 
 //--------------------------------------------------------------
@@ -3377,7 +3393,23 @@ void drawRaceResult(int pageidx) {
         str = (fval <= 0) ? "-:-.-" : getWatchString(fval);
         drawStringBlock(&myFontOvlayM, str, blk, line, ALIGN_CENTER, szb, szl);
     }
-
+    
+    // render heat session results
+    heatResults heatResults = getHeatResults(minLapTime);
+    line += 2;
+    ofSetColor(myColorYellow);
+    drawStringBlock(&myFontOvlayM, "Heat results:", 1, line, ALIGN_LEFT, szb, szl);
+    line += 1;
+    drawLineBlock(1, blk, line, szb, szl);
+    ofSetColor(myColorWhite);
+    line++;
+    
+    for (int i = 0; i < heatResults.totalPilotsInHeat; i++) {
+        line++;
+        str = heatResults.heatResultPerPilot[i];
+        drawStringBlock(&myFontOvlayM, str, 1, line, ALIGN_LEFT, szb, szl);
+    }
+    
     // laptimes : lap p1 p2 p3 p4
     // _header
     int xoff = blk + 2;
@@ -3415,6 +3447,7 @@ void drawRaceResult(int pageidx) {
         }
         lapidx += 1;
     }
+    
     // _page
     if (pages > 1) {
         line += 1;
@@ -3725,6 +3758,14 @@ void drawHelpBody(int line) {
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "C", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
+    // Clear heat race result
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Clear Heat Result", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "k", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
     // Speak a custom message
     ofSetColor(myColorDGray);
     drawULineBlock(blk1, blk4, line + 1, szb, szl);
@@ -3869,7 +3910,6 @@ void processQrReader() {
             if (zxres.getFound()) {
                 scanned = true;
                 camView[qrCamIndex].qrScanned = true;
-                beepSound.play();
                 string label = ofTrim(zxres.getText());
 #ifdef TARGET_WIN32
                 label = utf8ToAnsi(label);
@@ -3877,6 +3917,7 @@ void processQrReader() {
                 camView[qrCamIndex].labelString = label;
                 savePilotsFile();
                 autoSelectCameraIcon(qrCamIndex + 1, label);
+                speakAny("en", "Pilot name " + label + " found");
             }
         }
         qrCamIndex++;
