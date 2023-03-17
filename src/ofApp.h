@@ -15,12 +15,13 @@
 // system
 #define APP_VER         "v2.1.0"
 #define DEBUG_ENABLED   false
-#define HELP_LINES      40  // must be <= OVLTXT_LINES
+#define HELP_LINES      41  // must be <= OVLTXT_LINES
 #define SCENE_INIT      0
 #define SCENE_CAMS      1
 #define SCENE_MAIN      2
 #ifdef TARGET_OSX
 #define TVP_KEY_ALT     OF_KEY_COMMAND
+#define TVP_KEY_SHIFT   OF_KEY_SHIFT
 #define TVP_STR_ALT     "command"
 #else /* TARGET_OSX */
 #define TVP_KEY_ALT     OF_KEY_ALT

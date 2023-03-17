@@ -72,9 +72,16 @@ ofxJoystick gamePad[GPAD_MAX_DEVS];
 // heat settings
 // true - 3 consecutive laps, false 2 consecutive laps to count per round
 bool heatMode3Cons;
+string camFreq[4];
 
 //--------------------------------------------------------------
 void setupInit() {
+    
+    camFreq[0] = "R8";
+    camFreq[1] = "F2";
+    camFreq[2] = "R2";
+    camFreq[3] = "E5";
+
     // system
     ofSetEscapeQuitsApp(false);
     ofDirectory dir;
@@ -163,6 +170,19 @@ void toggleConsecutiveMode(){
 
 int getConsecLapCount(){
     return heatMode3Cons?3:2;
+}
+
+void changeCamFreqLabel(int camId) {
+    string str;
+#ifdef TARGET_WIN32
+    activateCursor();
+    setOverlayMode(OVLMODE_NONE);
+    str = ansiToUtf8(str);
+#endif /* TARGET_WIN32 */
+    camFreq[camId] = ofTrim(ofSystemTextBoxDialog("Set freq label for cam: " + ofToString(camId+1) , str));
+#ifdef TARGET_WIN32
+    ofSetFullscreen(fullscreenEnabled);
+#endif/* TARGET_WIN32 */
 }
 
 //--------------------------------------------------------------
@@ -884,9 +904,11 @@ void drawCameraPilot(int cidx, bool issub) {
                         camView[cidx].numberPosX + offset, camView[cidx].numberPosY + offset);
 
     // background
+    string camLabel = "["+camFreq[cidx] + "]: " + camView[cidx].labelString;
+    
     bgw = icnw;
     if (camView[cidx].labelString != "") {
-        bgw = bgw + fontlp->stringWidth(camView[cidx].labelString) + marg;
+        bgw = bgw + fontlp->stringWidth(camLabel) + marg;
     }
     ofFill();
     ofSetColor(myColorBGMiddle);
@@ -897,8 +919,8 @@ void drawCameraPilot(int cidx, bool issub) {
     // label
     if (camView[cidx].labelString != "") {
         ofSetColor(myColorYellow);
-        fontlp->drawString(camView[cidx].labelString,
-                           camView[cidx].labelPosX + offset, camView[cidx].labelPosY + offset);
+        fontlp->drawString(camLabel,
+                           camView[cidx].labelPosX, camView[cidx].labelPosY + offset);
     }
 
     // position
@@ -1318,7 +1340,16 @@ void keyPressedOverlayNone(int key) {
         if (fullscreenEnabled == true) {
             toggleFullscreen();
         }
-    } else if (ofGetKeyPressed(TVP_KEY_ALT)) {
+    } else if (ofGetKeyPressed(OF_KEY_F1)) {
+        changeCamFreqLabel(0);
+    } else if (ofGetKeyPressed(OF_KEY_F2)) {
+        changeCamFreqLabel(1);
+    } else if (ofGetKeyPressed(OF_KEY_F3)) {
+        changeCamFreqLabel(2);
+    } else if (ofGetKeyPressed(OF_KEY_F4)) {
+        changeCamFreqLabel(3);
+    }
+    else if (ofGetKeyPressed(TVP_KEY_ALT)) {
         if (key == '1') {
             toggleCameraVisibility(1);
         } else if (key == '2') {
@@ -3630,6 +3661,14 @@ void drawHelpBody(int line) {
     drawStringBlock(&myFontOvlayP, value, blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "1~4", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
+    // Set camera 1~4 enhanced view
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Set Camera 1~4 Freq label", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "F1~F4", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
     // Set camera 1~4 visibility
     ofSetColor(myColorDGray);
     drawULineBlock(blk1, blk4, line + 1, szb, szl);
@@ -3814,7 +3853,7 @@ void drawHelpBody(int line) {
     ofSetColor(myColorDGray);
     drawULineBlock(blk1, blk4, line + 1, szb, szl);
     ofSetColor(myColorWhite);
-    drawStringBlock(&myFontOvlayP, "Ask pilots are they reaady to race", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "Ask pilots are they ready to race", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "0", blk3, line, ALIGN_CENTER, szb, szl);
     line++;

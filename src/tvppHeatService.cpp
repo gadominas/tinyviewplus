@@ -109,26 +109,6 @@ void clearHeatResults(){
 }
 
 void copyRoundStatsToRepo(int pilotIndex, float destination[], int totalHeatLaps, bool useStartGate){
-//    int offset = (useStartGate == true ? 1 : 0);
-//
-//    string dumpValues = "useStartGate:" + ofToString(useStartGate) + " [round] >>>> ";
-//    for (int i = 0; i < destinationOffset; i++) {
-//        dumpValues += " , " + ofToString(destination[i]);
-//    }
-//
-//    ofLog() << dumpValues;
-//
-//    for (int i = offset; i < destinationOffset + offset; i++) {
-//        source[sourceOffset+i] = destination[i];
-//    }
-//
-//    dumpValues = "useStartGate:" + ofToString(useStartGate) + " [total] >>>> ";
-//
-//    for (int i = 0; i < (sourceOffset+destinationOffset); i++) {
-//        dumpValues += " , " + ofToString(source[i]);
-//    }
-//
-//    ofLog() << dumpValues;
     tvpPilotHeatStat* phHeatRecord = &pilotHeatStat[pilotIndex];
     tvHeatRecord* heatRecord = &phHeatRecord->heats[phHeatRecord->totalHeats];
     
