@@ -69,6 +69,9 @@ int qrUpdCount;
 int qrCamIndex;
 // gamepad
 ofxJoystick gamePad[GPAD_MAX_DEVS];
+// heat settings
+// true - 3 consecutive laps, false 2 consecutive laps to count per round
+bool heatMode3Cons;
 
 //--------------------------------------------------------------
 void setupInit() {
@@ -142,6 +145,7 @@ void setupInit() {
     finishSound.load(SND_FINISH_FILE);
     notifySound.load(SND_NOTIFY_FILE);
     cancelSound.load(SND_CANCEL_FILE);
+    heatMode3Cons = true;
     raceStarted = false;
     elapsedTime = 0;
     raceResultTimer = -1;
@@ -151,6 +155,14 @@ void setupInit() {
     autoSelectSpeechLang();
     // extra camera
     camProfFpvExtra.enabled = false;
+}
+
+void toggleConsecutiveMode(){
+    heatMode3Cons = !heatMode3Cons;
+}
+
+int getConsecLapCount(){
+    return heatMode3Cons?3:2;
 }
 
 //--------------------------------------------------------------
@@ -200,6 +212,8 @@ void loadSettingsFile() {
     minLapTime = xmlSettings.getValue(SNM_RACE_MINLAP, minLapTime);
     // staggered start
     useStartGate = xmlSettings.getValue(SNM_RACE_STAGGR, useStartGate);
+    // heat mode
+    heatMode3Cons = xmlSettings.getValue(SNM_HEAT_MODE, heatMode3Cons);
 }
 
 void saveSettingsFile() {
@@ -232,6 +246,7 @@ void saveSettingsFile() {
     xmlSettings.setValue(SNM_RACE_MINLAP, minLapTime);
     // staggered start
     xmlSettings.setValue(SNM_RACE_STAGGR, useStartGate);
+    xmlSettings.setValue(SNM_HEAT_MODE, heatMode3Cons);
 
     xmlSettings.saveFile(SETTINGS_FILE);
 }
@@ -936,15 +951,22 @@ void drawCameraLapTime(int idx, bool issub) {
             drawStringWithShadow(&myFontLap, myColorWhite, myColorBGMiddle, sout,
                                  camView[i].lapPosX, camView[i].lapPosY + offset);
         }
+        
         float blap = getBestLap(i);
         float heatBlap = getBestHeatLapTime(camView[i].labelString);
-        float conFastedTwoLaps = getFastedConsecutiveLaps(camView[i].labelString, minLapTime);
+        float bestConsLaps = getFastedConsecutiveLaps(camView[i].labelString, minLapTime, getConsecLapCount());
+        string bestConsLapsStr = getLapStr(bestConsLaps) + "s";
+        
+        if( bestConsLaps == BEST_LAP_REST_VALUE){
+            bestConsLapsStr = "na ";
+        }
+        
         
         if (blap != 0) {
             if( heatBlap == BEST_LAP_REST_VALUE ) {
                 sout = "BestLap: " + getLapStr(blap) + "s";
             } else {
-                sout = "BestLap: " + getLapStr(blap) + "s (" + getLapStr(heatBlap) + "s / " + getLapStr(conFastedTwoLaps) + "s)";
+                sout = "BestLap: " + getLapStr(blap) + "s (" + getLapStr(heatBlap) + "s / " + bestConsLapsStr + ")";
             }
             
             if (issub) {
@@ -1396,6 +1418,8 @@ void keyPressedOverlayNone(int key) {
             toggleUseStartGate();
         } else if (key == 's' || key == 'S') {
             toggleSysStat();
+        } else if (key == 'v' || key == 'V') {
+            toggleConsecutiveMode();
         }
     }
 }
@@ -2244,7 +2268,6 @@ void toggleSysStat() {
     sysStatEnabled = !sysStatEnabled;
     saveSettingsFile();
 }
-
 //--------------------------------------------------------------
 void recvOsc() {
     while (oscReceiver.hasWaitingMessages() == true) {
@@ -3395,19 +3418,27 @@ void drawRaceResult(int pageidx) {
     }
     
     // render heat session results
-    heatResults heatResults = getHeatResults(minLapTime);
+    heatResults heatResults = getHeatResults(minLapTime, getConsecLapCount());
     line += 2;
     ofSetColor(myColorYellow);
     drawStringBlock(&myFontOvlayM, "Heat results:", 1, line, ALIGN_LEFT, szb, szl);
-    line += 1;
-    drawLineBlock(1, blk, line, szb, szl);
     ofSetColor(myColorWhite);
     line++;
-    
+    blk = 1;
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Name", blk++, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "Best Cons", blk++, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "Best lap", blk++, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "Total heats", blk++, line, ALIGN_CENTER, szb, szl);
+    line += 1;
+    drawLineBlock(1, blk, line, szb, szl);
+        
     for (int i = 0; i < heatResults.totalPilotsInHeat; i++) {
         line++;
-        str = heatResults.heatResultPerPilot[i];
-        drawStringBlock(&myFontOvlayM, str, 1, line, ALIGN_LEFT, szb, szl);
+        drawStringBlock(&myFontOvlayM, heatResults.pilotName[i], 1, line, ALIGN_CENTER, szb, szl);
+        drawStringBlock(&myFontOvlayM, heatResults.bestConsTime[i], 2, line, ALIGN_CENTER, szb, szl);
+        drawStringBlock(&myFontOvlayM, heatResults.bestLapTime[i], 3, line, ALIGN_CENTER, szb, szl);
+        drawStringBlock(&myFontOvlayM, heatResults.totalHeats[i], 4, line, ALIGN_CENTER, szb, szl);
     }
     
     // laptimes : lap p1 p2 p3 p4
@@ -3758,13 +3789,18 @@ void drawHelpBody(int line) {
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "C", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
+    value =  ofToString(getConsecLapCount());
+    drawStringBlock(&myFontOvlayP, "Set consecutive mode (3 vs 2 laps)", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, value, blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "V", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
     // Clear heat race result
     ofSetColor(myColorDGray);
     drawULineBlock(blk1, blk4, line + 1, szb, szl);
     ofSetColor(myColorWhite);
     drawStringBlock(&myFontOvlayP, "Clear Heat Result", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
-    drawStringBlock(&myFontOvlayP, "k", blk3, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "K", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
     // Speak a custom message
     ofSetColor(myColorDGray);
@@ -3772,7 +3808,7 @@ void drawHelpBody(int line) {
     ofSetColor(myColorWhite);
     drawStringBlock(&myFontOvlayP, "Send a message to pilots", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
-    drawStringBlock(&myFontOvlayP, "m", blk3, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "M", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
     // Speak a predefined message
     ofSetColor(myColorDGray);
@@ -3788,9 +3824,7 @@ void drawHelpBody(int line) {
     ofSetColor(myColorWhite);
     drawStringBlock(&myFontOvlayP, "Ask pilots to land", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, "-", blk2, line, ALIGN_CENTER, szb, szl);
-    drawStringBlock(&myFontOvlayP, "9", blk3, line, ALIGN_CENTER, szb, szl);
-    line++;
-}
+    drawStringBlock(&myFontOvlayP, "9", blk3, line, ALIGN_CENTER, szb, szl);}
 
 //--------------------------------------------------------------
 void initOverlayMessage() {

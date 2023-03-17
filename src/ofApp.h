@@ -13,9 +13,9 @@
 /* ---------- definitions ---------- */
 
 // system
-#define APP_VER         "v2.0.1"
+#define APP_VER         "v2.1.0"
 #define DEBUG_ENABLED   false
-#define HELP_LINES      38  // must be <= OVLTXT_LINES
+#define HELP_LINES      40  // must be <= OVLTXT_LINES
 #define SCENE_INIT      0
 #define SCENE_CAMS      1
 #define SCENE_MAIN      2
@@ -45,6 +45,7 @@
 #define SNM_RACE_MINLAP "race:minLapTime"
 #define SNM_RACE_STAGGR "race:staggStart"
 #define SNM_RACE_LAPTMO "race:lapAfterTmo"
+#define SNM_HEAT_MODE   "race:heatMode"
 #define BTTN_FSCR_FILE  "system/button_fullscreen.png"
 #define BTTN_QUIT_FILE  "system/button_quit.png"
 #define BTTN_SETT_FILE  "system/button_settings.png"
