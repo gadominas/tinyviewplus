@@ -17,9 +17,9 @@ tvpPilotHeatStat pilotHeatStat[MAX_HEAT_SLOTS];
 float calcMinSumPairs(float arr[], int n) {
    float minSum = 999;
     
-   for (int i=0; i< (n - 2); i++)
-     if(minSum > (arr[i] + arr[i + 1] + arr[i + 2]))
-       minSum = (arr[i] + arr[i + 1] + arr[i + 2]);
+   for (int i=0; i< (n - 1); i++)
+     if(minSum > (arr[i] + arr[i + 1] ))
+       minSum = (arr[i] + arr[i + 1]);
    
    return minSum;
 }
@@ -215,7 +215,7 @@ void fwriteRaceHeatResult() {
     strsumm += newline;
 
     // write to file
-    heatResultsFile.open(ARAP_RESULT_HEATS_DIR + timestamp + "_heats.txt" , ofFile::WriteOnly);
+    heatResultsFile.open(ARAP_RESULT_HEATS_DIR + timestamp + "_all_rounds_tops.txt" , ofFile::WriteOnly);
     heatResultsFile << (strsumm);
     heatResultsFile.close();
     // copy to clipboard

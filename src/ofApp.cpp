@@ -593,6 +593,7 @@ void ofApp::update() {
                     camView[i].foundMarkerNum = 0;
                     camView[i].foundValidMarkerNum = 0;
                     camView[i].enoughMarkers = false;
+                    speakAny("en", camView[i].labelString + " finished the round!");
                     finishSound.play();
                     continue;
                 }
@@ -827,7 +828,7 @@ void drawCameraARMarker(int idx, bool isSub) {
     ofTranslate(tx, ty);
     ofScale(sc, sc, 1);
     ofSetLineWidth(ARAP_RECT_LINEW);
-    camView[i].aruco.draw2dGate(myColorYellow, myColorAlert, false);
+    camView[i].aruco.draw2dGate(myColorYellow, myColorAlert, true);
     ofPopMatrix();
     if (cameraLapHistMode == LAPHIST_MD_IN) {
         return;
@@ -2349,6 +2350,15 @@ void recvOsc() {
             else if (addr == "/v1/speech/jp/say") {
                 recvOscSpeech("jp", oscm.getArgAsString(0));
             }
+        } else if (addr.find("/v1/race/start") == 0) {
+            startRace();
+            ofLog() << "startRace osc cmd received";
+        } else if (addr.find("/v1/race/stop") == 0) {
+            stopRace(false);
+            ofLog() << "stopRace osc cmd received";
+        } else if (addr.find("/v1/race/status") == 0) {
+            stopRace(false);
+            ofLog() << "raceStatus osc cmd received";
         }
     }
 }
@@ -2765,8 +2775,8 @@ int getMaxLaps() {
 //--------------------------------------------------------------
 string getLapStr(float lap) {
     stringstream stream;
-    float val = ceil(lap * 100) / 100;
-    stream << fixed << setprecision(2) << val; // 2 digits
+    float val = ceil(lap * 1000) / 1000;
+    stream << fixed << setprecision(3) << val; // 2 digits
     return stream.str();
 }
 
@@ -2985,7 +2995,7 @@ void fwriteRaceResult() {
     }
 
     // write to file
-    resultsFile.open(ARAP_RESULT_DIR + timestamp + ".txt" , ofFile::WriteOnly);
+    resultsFile.open(ARAP_RESULT_DIR + timestamp + "_heats.txt" , ofFile::WriteOnly);
     resultsFile << (strsumm + strlaph + strlapb);
     resultsFile.close();
     // copy to clipboard
