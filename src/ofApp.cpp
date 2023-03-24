@@ -459,6 +459,31 @@ void updateInit() {
     }
 }
 
+string getRacePositionLabel(int position){
+    int pos = camView[position].racePosition;
+    
+    switch (pos) {
+        case 1:
+            return "1st";
+        case 2:
+            return "2nd";
+        case 3:
+            return "3rd";
+        case 4:
+            return "4th";
+        default:
+            ofLog() << ">> getRacePositionLabel: " << ofToString(pos);
+            return "";
+    }
+}
+
+void announceRaceFinishForPilot(int pilotCamViewId){
+    string raceOverMessageForPilot = camView[pilotCamViewId].labelString + "  finished the round as  " + getRacePositionLabel(camView[pilotCamViewId].racePosition);
+    speakAny("en", raceOverMessageForPilot);
+    setOverlayMessage(raceOverMessageForPilot);
+    finishSound.play();
+}
+
 //--------------------------------------------------------------
 void updateCamCheck() {
     for (int i = 0; i < cameraNum; i++) {
@@ -586,15 +611,18 @@ void ofApp::update() {
                 camView[i].lapHistName[total - 1] = camView[i].labelString;
                 camView[i].lapHistLapTime[total - 1] = lap;
                 camView[i].lapHistElpTime[total - 1] = elp;
+                
                 updateRacePositions();
+                    
                 if (total >= (raceDuraLaps + (useStartGate == true ? 1 : 0))
                     || (raceDuraSecs > 0 && (elp - WATCH_COUNT_SEC) >= raceDuraSecs)) {
                     // finish by laps / time
                     camView[i].foundMarkerNum = 0;
                     camView[i].foundValidMarkerNum = 0;
                     camView[i].enoughMarkers = false;
-                    speakAny("en", camView[i].labelString + " finished the round!");
-                    finishSound.play();
+                    
+                    //announceRaceFinishForPilot(i);
+                    
                     continue;
                 }
                 if (total == ((raceDuraLaps + (useStartGate == true ? 1 : 0)) - 1)) {
@@ -602,10 +630,18 @@ void ofApp::update() {
                 } else {
                     beepSound.play();
                 }
-                speakLap((i + 1), lap, total);
+                
+                // announce final round or speak lap
+                if ((total + 1) == (raceDuraLaps + (useStartGate == true ? 1 : 0))) {
+                    speakAny("en", camView[i].labelString + ",   final round!");
+                } else {
+                    speakLap((i + 1), lap, total);
+                }
             }
+            
             camView[i].foundMarkerNum = anum;
             camView[i].foundValidMarkerNum = vnum;
+            
             if (anum == 0) {
                 camView[i].enoughMarkers = false;
             } else if ((arLapMode == ARAP_MODE_NORM && vnum >= ARAP_MNUM_THR)
@@ -928,24 +964,9 @@ void drawCameraPilot(int cidx, bool issub) {
     if (camView[cidx].moveSteps > 0 || camView[cidx].racePosition == 0) {
         return;
     }
-    string str = "";
-    int pos = camView[cidx].racePosition;
-    int x;
-    switch (pos) {
-        case 1:
-            str = "1st";
-            break;
-        case 2:
-            str = "2nd";
-            break;
-        case 3:
-            str = "3rd";
-            break;
-        case 4:
-            str = "4th";
-            break;
-    }
-    x = min(ofGetWidth(), camView[cidx].posX + camView[cidx].width) - (1 + fontlp->stringWidth(str));
+    
+    string str = getRacePositionLabel(camView[cidx].racePosition);
+    int x = min(ofGetWidth(), camView[cidx].posX + camView[cidx].width) - (1 + fontlp->stringWidth(str));
     x = x - (issub ? 5 : 10) - offset;
     drawStringWithShadow(fontlp, myColorWhite, myColorBGMiddle, str, x, camView[cidx].labelPosY + offset);
 }
@@ -1452,6 +1473,8 @@ void keyPressedOverlayNone(int key) {
             toggleSysStat();
         } else if (key == 'v' || key == 'V') {
             toggleConsecutiveMode();
+        } else if (key == '~') {
+            setupCamCheck();
         }
     }
 }
@@ -2308,6 +2331,7 @@ void recvOsc() {
         string method;
         oscReceiver.getNextMessage(oscm);
         addr = oscm.getAddress();
+        ofLog() << "addr: " << addr;
         if (addr.find("/v1/camera/") == 0) {
             string str;
             int camid;
@@ -2355,10 +2379,8 @@ void recvOsc() {
             ofLog() << "startRace osc cmd received";
         } else if (addr.find("/v1/race/stop") == 0) {
             stopRace(false);
+            raceResultTimer = -1;
             ofLog() << "stopRace osc cmd received";
-        } else if (addr.find("/v1/race/status") == 0) {
-            stopRace(false);
-            ofLog() << "raceStatus osc cmd received";
         }
     }
 }
@@ -2390,8 +2412,9 @@ void recvOscCameraString(int camid, string method, string argstr) {
         if (argstr == "off" && camView[camid - 1].visible == true) {
             toggleCameraVisibility(camid);
         }
-    }
-    else if (method == "label") {
+    } else if (method == "freq") {
+        camFreq[camid - 1]=argstr;
+    } else if (method == "label") {
         string str = argstr;
 #ifdef TARGET_WIN32
         str = utf8ToAnsi(str);
