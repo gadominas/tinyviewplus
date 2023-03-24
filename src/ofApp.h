@@ -88,8 +88,11 @@
 #define CAMERA_WIDTH    640
 #define CAMERA_HEIGHT   480
 #define CAMERA_RATIO    1.3333
-#define FONT_P_FILE     "system/GenShinGothic-P-Bold.ttf"
-#define FONT_M_FILE     "system/GenShinGothic-Monospace-Bold.ttf"
+#define FONT_P_FILE     "system/Roboto-Regular.ttf"
+#define FONT_M_FILE     "system/Roboto-Bold.ttf"
+#define FONT_TITLE_FILE "system/title.ttf"
+#define FONT_TITLE_NUM_FILE "system/title_num.ttf"
+#define FONT_POSITION_FILE "system/position.ttf"
 #define ICON_DIR        "pilots/"
 #define ICON_WIDTH      50
 #define ICON_HEIGHT     50
@@ -164,7 +167,7 @@
 #define ARAP_MAX_RSECS  36000
 #define ARAP_RSLT_SCRN  0
 #define ARAP_RSLT_FILE  1
-#define ARAP_RSLT_DELAY (FRAME_RATE * 3)
+#define ARAP_RSLT_DELAY (FRAME_RATE * 4)
 #define ARAP_RECT_LINEW 5
 #define WATCH_COUNT_SEC 5
 // osc

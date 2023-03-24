@@ -18,9 +18,9 @@ bool sysStatEnabled;
 ofVideoGrabber grabber[CAMERA_MAXNUM];
 ofColor myColorYellow, myColorWhite, myColorLGray, myColorDGray, myColorAlert;
 ofColor myColorBGDark, myColorBGMiddle, myColorBGLight;
-ofxTrueTypeFontUC myFontNumber, myFontLabel, myFontLap, myFontLapHist;
+ofxTrueTypeFontUC myFontNumber, myFontLabel, myFontLap, myFontLapHist, fontPosition;
 ofxTrueTypeFontUC myFontNumberSub, myFontLabelSub, myFontLapSub;
-ofxTrueTypeFontUC myFontInfo1m, myFontInfo1p, myFontInfoWatch;
+ofxTrueTypeFontUC myFontInfo1m, myFontInfo1p, myFontInfoWatch, fontTitle;
 ofImage logoLargeImage, logoSmallImage;
 ofImage bttnFscrImage, bttnQuitImage, bttnSettImage, bttnWndwImage;
 ofImage wallImage;
@@ -98,13 +98,14 @@ void setupInit() {
     ofBackground(0, 0, 0);
     ofSetVerticalSync(VERTICAL_SYNC);
     ofSetFrameRate(FRAME_RATE);
-    myFontNumber.load(FONT_P_FILE, NUMBER_HEIGHT);
-    myFontLabel.load(FONT_P_FILE, LABEL_HEIGHT);
-    myFontLap.load(FONT_P_FILE, LAP_HEIGHT);
-    myFontLapHist.load(FONT_P_FILE, LAPHIST_HEIGHT);
+    myFontNumber.load(FONT_TITLE_NUM_FILE, NUMBER_HEIGHT * 2);
+    myFontLabel.load(FONT_TITLE_FILE, LABEL_HEIGHT / 1.5);
+    myFontLap.load(FONT_TITLE_FILE, LAP_HEIGHT);
+    myFontLapHist.load(FONT_TITLE_NUM_FILE, LAPHIST_HEIGHT/1.5);
     myFontNumberSub.load(FONT_P_FILE, NUMBER_HEIGHT / 2);
     myFontLabelSub.load(FONT_P_FILE, LABEL_HEIGHT / 2);
     myFontLapSub.load(FONT_P_FILE, LAP_HEIGHT / 2);
+    fontPosition.load(FONT_POSITION_FILE, LAP_HEIGHT*3);
     myFontInfo1m.load(FONT_M_FILE, INFO_HEIGHT);
     myFontInfo1p.load(FONT_P_FILE, INFO_HEIGHT);
     myFontInfoWatch.load(FONT_M_FILE, WATCH_HEIGHT);
@@ -922,8 +923,8 @@ void drawCameraPilot(int cidx, bool issub) {
     } else {
         fontnum = &myFontNumber;
         fontlp = &myFontLabel;
-        icnw = ICON_WIDTH;
-        icnh = ICON_HEIGHT;
+        icnw = ICON_WIDTH / 2;
+        icnh = ICON_HEIGHT /2 ;
         marg = 15;
     }
     offset = (cameraFrameEnabled == true) ? FRAME_LINEWIDTH : 0;
@@ -931,7 +932,8 @@ void drawCameraPilot(int cidx, bool issub) {
     // badge
     ofSetColor(camView[cidx].baseColor);
     ofDrawRectangle(camView[cidx].basePosX + offset, camView[cidx].basePosY + offset,
-                    camView[cidx].baseWidth, camView[cidx].baseHeight);
+                    camView[cidx].baseWidth + 10, camView[cidx].baseHeight);
+    
     // number
     ofSetColor(myColorWhite);
     fontnum->drawString(ofToString(cidx + 1),
@@ -946,15 +948,15 @@ void drawCameraPilot(int cidx, bool issub) {
     }
     ofFill();
     ofSetColor(myColorBGMiddle);
-    ofDrawRectangle(camView[cidx].iconPosX + offset, camView[cidx].iconPosY + offset, bgw, icnh);
+    ofDrawRectangle(camView[cidx].iconPosX + offset + 10, camView[cidx].iconPosY + offset, bgw, icnh);
     // icon
     ofSetColor(myColorWhite);
-    camView[cidx].iconImage.draw(camView[cidx].iconPosX + offset, camView[cidx].iconPosY + offset, icnw, icnh);
+    camView[cidx].iconImage.draw(camView[cidx].iconPosX + offset + 10, camView[cidx].iconPosY + offset, icnw, icnh);
     // label
     if (camView[cidx].labelString != "") {
         ofSetColor(myColorYellow);
         fontlp->drawString(camLabel,
-                           camView[cidx].labelPosX, camView[cidx].labelPosY + offset);
+                           camView[cidx].labelPosX -12, camView[cidx].labelPosY + offset-19);
     }
 
     // position
@@ -965,7 +967,7 @@ void drawCameraPilot(int cidx, bool issub) {
     string str = getRacePositionLabel(camView[cidx].racePosition);
     int x = min(ofGetWidth(), camView[cidx].posX + camView[cidx].width) - (1 + fontlp->stringWidth(str));
     x = x - (issub ? 5 : 10) - offset;
-    drawStringWithShadow(fontlp, myColorWhite, myColorBGMiddle, str, x, camView[cidx].labelPosY + offset);
+    drawStringWithShadow(&fontPosition, myColorWhite, myColorBGMiddle, str, x-80, camView[cidx].labelPosY + offset+40);
 }
 
 //--------------------------------------------------------------
@@ -996,7 +998,7 @@ void drawCameraLapTime(int idx, bool issub) {
         float blap = getBestLap(i);
         float heatBlap = getBestHeatLapTime(camView[i].labelString);
         float bestConsLaps = getFastedConsecutiveLaps(camView[i].labelString, minLapTime, getConsecLapCount());
-        string bestConsLapsStr = getLapStr(bestConsLaps) + "s";
+        string bestConsLapsStr = getLapStr(bestConsLaps);
         
         if( bestConsLaps == BEST_LAP_REST_VALUE){
             bestConsLapsStr = "na ";
@@ -1005,9 +1007,9 @@ void drawCameraLapTime(int idx, bool issub) {
         
         if (blap != 0) {
             if( heatBlap == BEST_LAP_REST_VALUE ) {
-                sout = "BestLap: " + getLapStr(blap) + "s";
+                sout = "BestLap: " + getLapStr(blap);
             } else {
-                sout = "BestLap: " + getLapStr(blap) + "s (" + getLapStr(heatBlap) + "s / " + bestConsLapsStr + ")";
+                sout = "BestLap: " + getLapStr(blap) + " (" + getLapStr(heatBlap) + " / " + bestConsLapsStr + ")";
             }
             
             if (issub) {
@@ -3672,6 +3674,14 @@ void drawHelpBody(int line) {
     drawStringBlock(&myFontOvlayP, "Set Camera View Trimming", blk1, line, ALIGN_LEFT, szb, szl);
     drawStringBlock(&myFontOvlayP, value, blk2, line, ALIGN_CENTER, szb, szl);
     drawStringBlock(&myFontOvlayP, "T", blk3, line, ALIGN_CENTER, szb, szl);
+    line++;
+    // Set camera frame visibility
+    ofSetColor(myColorDGray);
+    drawULineBlock(blk1, blk4, line + 1, szb, szl);
+    ofSetColor(myColorWhite);
+    drawStringBlock(&myFontOvlayP, "Rescan all the cameras", blk1, line, ALIGN_LEFT, szb, szl);
+    drawStringBlock(&myFontOvlayP, "~", blk2, line, ALIGN_CENTER, szb, szl);
+    drawStringBlock(&myFontOvlayP, "~", blk3, line, ALIGN_CENTER, szb, szl);
     line++;
     // Set camera frame visibility
     ofSetColor(myColorDGray);
