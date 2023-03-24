@@ -460,9 +460,7 @@ void updateInit() {
 }
 
 string getRacePositionLabel(int position){
-    int pos = camView[position].racePosition;
-    
-    switch (pos) {
+    switch (position) {
         case 1:
             return "1st";
         case 2:
@@ -472,7 +470,6 @@ string getRacePositionLabel(int position){
         case 4:
             return "4th";
         default:
-            ofLog() << ">> getRacePositionLabel: " << ofToString(pos);
             return "";
     }
 }
@@ -621,7 +618,7 @@ void ofApp::update() {
                     camView[i].foundValidMarkerNum = 0;
                     camView[i].enoughMarkers = false;
                     
-                    //announceRaceFinishForPilot(i);
+                    announceRaceFinishForPilot(i);
                     
                     continue;
                 }
