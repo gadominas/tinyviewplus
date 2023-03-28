@@ -14,7 +14,7 @@
 
 // system
 #define APP_VER         "v2.1.0"
-#define DEBUG_ENABLED   false
+#define DEBUG_ENABLED   true
 #define HELP_LINES      41  // must be <= OVLTXT_LINES
 #define SCENE_INIT      0
 #define SCENE_CAMS      1
@@ -75,6 +75,8 @@
 #define COLOR_BG_DARK   0,0,0,223
 #define COLOR_BG_MIDDLE 0,0,0,127
 #define COLOR_BG_LIGHT  0,0,0,31
+#define COLOR_STAT_A    255,215,0,31
+#define COLOR_STAT_B    255,215,0,50
 #define COLOR_ALERT     255,0,0
 // view
 #define FRAME_RATE      60
@@ -93,6 +95,8 @@
 #define FONT_TITLE_FILE "system/title.ttf"
 #define FONT_TITLE_NUM_FILE "system/title_num.ttf"
 #define FONT_POSITION_FILE "system/position.ttf"
+#define FONT_COUNTDOWN_TITLE "system/countdown.otf"
+#define FONT_COUNTDOWN_TIME_TITLE "system/timelcd.ttf"
 #define ICON_DIR        "pilots/"
 #define ICON_WIDTH      50
 #define ICON_HEIGHT     50
@@ -169,7 +173,8 @@
 #define ARAP_RSLT_FILE  1
 #define ARAP_RSLT_DELAY (FRAME_RATE * 4)
 #define ARAP_RECT_LINEW 5
-#define WATCH_COUNT_SEC 5
+#define WATCH_COUNT_SEC 3
+#define HIDE_FINISHED_LABEL_COUNT_SEC 5
 // osc
 #define OSC_LISTEN_PORT 4000
 // speech

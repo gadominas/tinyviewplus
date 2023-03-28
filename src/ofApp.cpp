@@ -8,6 +8,9 @@
 #endif /* TARGET_WIN32 */
 
 /* ---------- variables ---------- */
+int debugCamIndex = 0;
+int debugCamLapIndex[4];
+float hideFinishedLabelStamp = .0f;
 
 // system
 int camCheckCount;
@@ -18,9 +21,13 @@ bool sysStatEnabled;
 ofVideoGrabber grabber[CAMERA_MAXNUM];
 ofColor myColorYellow, myColorWhite, myColorLGray, myColorDGray, myColorAlert;
 ofColor myColorBGDark, myColorBGMiddle, myColorBGLight;
+ofColor myColorStatA;
+ofColor myColorStatB;
 ofxTrueTypeFontUC myFontNumber, myFontLabel, myFontLap, myFontLapHist, fontPosition;
 ofxTrueTypeFontUC myFontNumberSub, myFontLabelSub, myFontLapSub;
 ofxTrueTypeFontUC myFontInfo1m, myFontInfo1p, myFontInfoWatch, fontTitle;
+ofxTrueTypeFontUC fontCountDown, fontTimeLCD;
+ofxTrueTypeFontUC fontSubStatSmall;
 ofImage logoLargeImage, logoSmallImage;
 ofImage bttnFscrImage, bttnQuitImage, bttnSettImage, bttnWndwImage;
 ofImage wallImage;
@@ -100,6 +107,7 @@ void setupInit() {
     ofSetFrameRate(FRAME_RATE);
     myFontNumber.load(FONT_TITLE_NUM_FILE, NUMBER_HEIGHT * 2);
     myFontLabel.load(FONT_TITLE_FILE, LABEL_HEIGHT / 1.5);
+    fontSubStatSmall.load(FONT_TITLE_FILE, LABEL_HEIGHT / 2);
     myFontLap.load(FONT_TITLE_FILE, LAP_HEIGHT);
     myFontLapHist.load(FONT_TITLE_NUM_FILE, LAPHIST_HEIGHT/1.5);
     myFontNumberSub.load(FONT_P_FILE, NUMBER_HEIGHT / 2);
@@ -109,6 +117,10 @@ void setupInit() {
     myFontInfo1m.load(FONT_M_FILE, INFO_HEIGHT);
     myFontInfo1p.load(FONT_P_FILE, INFO_HEIGHT);
     myFontInfoWatch.load(FONT_M_FILE, WATCH_HEIGHT);
+    
+    fontCountDown.load(FONT_COUNTDOWN_TITLE,LABEL_HEIGHT*4);
+    fontTimeLCD.load(FONT_COUNTDOWN_TIME_TITLE, LABEL_HEIGHT);
+    
     loadOverlayFont();
     cameraTrimEnabled = DFLT_CAM_TRIM;
     fullscreenEnabled = DFLT_FSCR_ENBLD;
@@ -186,6 +198,15 @@ void changeCamFreqLabel(int camId) {
 #endif/* TARGET_WIN32 */
 }
 
+float rnd(float min, float max) {
+    return  (max - min) * ((((float) rand()) / (float) RAND_MAX)) + min ;
+}
+
+void drawString(ofxTrueTypeFontUC *font, ofColor color, string str, int x, int y) {
+    // string
+    ofSetColor(color);
+    font->drawString(str, x, y);
+}
 //--------------------------------------------------------------
 void loadWallImage(string path) {
     wallImage.clear();
@@ -874,6 +895,7 @@ void drawCameraARMarker(int idx, bool isSub) {
     int vnum = camView[i].foundValidMarkerNum;
     int ivnum = camView[i].foundMarkerNum - camView[i].foundValidMarkerNum;
     int offset = (cameraFrameEnabled == true) ? FRAME_LINEWIDTH : 0;
+    
     for (int j = 0; j < vnum; j++) {
         lv_valid += "|";
     }
@@ -923,12 +945,12 @@ void drawCameraPilot(int cidx, bool issub) {
     } else {
         fontnum = &myFontNumber;
         fontlp = &myFontLabel;
-        icnw = ICON_WIDTH / 2;
-        icnh = ICON_HEIGHT /2 ;
+        icnw = ICON_WIDTH;
+        icnh = ICON_HEIGHT;
         marg = 15;
     }
     offset = (cameraFrameEnabled == true) ? FRAME_LINEWIDTH : 0;
-
+    
     // badge
     ofSetColor(camView[cidx].baseColor);
     ofDrawRectangle(camView[cidx].basePosX + offset, camView[cidx].basePosY + offset,
@@ -952,11 +974,18 @@ void drawCameraPilot(int cidx, bool issub) {
     // icon
     ofSetColor(myColorWhite);
     camView[cidx].iconImage.draw(camView[cidx].iconPosX + offset + 10, camView[cidx].iconPosY + offset, icnw, icnh);
+    
     // label
     if (camView[cidx].labelString != "") {
         ofSetColor(myColorYellow);
         fontlp->drawString(camLabel,
-                           camView[cidx].labelPosX -12, camView[cidx].labelPosY + offset-19);
+                           camView[cidx].labelPosX + 12 + offset, camView[cidx].labelPosY + offset - 19);
+    }
+    
+    if(getBestLap(cidx) != 0){
+        ofSetColor(myColorWhite);
+        fontSubStatSmall.drawString("Best: " + getLapStr(getBestLap(cidx)),
+                           camView[cidx].labelPosX + 12 + offset, camView[cidx].labelPosY + offset);
     }
 
     // position
@@ -967,7 +996,34 @@ void drawCameraPilot(int cidx, bool issub) {
     string str = getRacePositionLabel(camView[cidx].racePosition);
     int x = min(ofGetWidth(), camView[cidx].posX + camView[cidx].width) - (1 + fontlp->stringWidth(str));
     x = x - (issub ? 5 : 10) - offset;
-    drawStringWithShadow(&fontPosition, myColorWhite, myColorBGMiddle, str, x-80, camView[cidx].labelPosY + offset+40);
+    drawStringWithShadow(&fontPosition, myColorWhite, myColorBGMiddle, str, x-80, camView[cidx].labelPosY + offset + 35);
+    
+    // render lap timing at the bottom of the cam view
+    float frameOffsetWith = 60;
+    float frameOffsetHeight = 20;
+    int frameIndex = 0;
+    int frameIndexOffset = 0;
+    
+    for (int i = 0; i < camView[cidx].totalLaps; i++) {
+        if( useStartGate && i == 0){
+            frameIndexOffset = 1 ;
+            continue;
+        }
+        
+        int statLabelX = camView[cidx].posX + offset + (frameIndex * frameOffsetWith);
+        int statLabelY = camView[cidx].posY + camView[cidx].height + offset - frameOffsetHeight;
+        
+        ofColor frameColor = (frameIndex % 2)?myColorStatB:myColorStatA;
+        // fill lap timing
+        ofSetColor(frameColor);
+        ofFill();
+        
+        ofDrawRectangle(statLabelX, statLabelY, frameOffsetWith, frameOffsetHeight);
+        ofSetColor(myColorWhite);
+        fontSubStatSmall.drawString(getLapStr(camView[cidx].lapHistLapTime[frameIndex+frameIndexOffset]), statLabelX + 3, statLabelY + 17);
+        
+        frameIndex++;
+    }
 }
 
 //--------------------------------------------------------------
@@ -1004,7 +1060,6 @@ void drawCameraLapTime(int idx, bool issub) {
             bestConsLapsStr = "na ";
         }
         
-        
         if (blap != 0) {
             if( heatBlap == BEST_LAP_REST_VALUE ) {
                 sout = "BestLap: " + getLapStr(blap);
@@ -1021,7 +1076,7 @@ void drawCameraLapTime(int idx, bool issub) {
                                      camView[i].lapPosX,
                                      camView[i].lapPosY + offset + LAP_HEIGHT + 10);
             }
-            sout = "TotalTime: ";
+            sout = "Total: ";
             if (useStartGate == true) {
                 sout += getWatchString(camView[i].prevElapsedSec - camView[i].lapHistElpTime[0]);
             } else {
@@ -1149,6 +1204,16 @@ string getWatchString(float sec) {
     return ofToString(buf);
 }
 
+void drawMiddleRowBox(ofColor color){
+    int w = (ofGetWidth() / 4) - 4;
+    int h = w / CAMERA_RATIO;
+    int y = (ofGetHeight() / 2) - (h / 2);
+    ofSetColor(color);
+    ofFill();
+    
+    ofDrawRectangle(-2, y - 2, ofGetWidth() + 4, h + 4);
+}
+
 //--------------------------------------------------------------
 void drawWatch() {
     string str;
@@ -1166,12 +1231,24 @@ void drawWatch() {
             if (raceDuraSecs >= 3600 && sec < 3600) {
                 str = "00:" + str;
             }
-            str = str + " / " + getWatchString(raceDuraSecs);
+            str = str + " - " + getWatchString(raceDuraSecs);
         }
     }
-    int x = (ofGetWidth() / 2) - (myFontInfoWatch.stringWidth(str) / 2);
-    x = (int)(x / 10) * 10;
-    drawStringWithShadow(&myFontInfoWatch, myColorWhite, myColorBGDark, str, x, ofGetHeight() - WATCH_OFFSET_Y);
+    
+    int x = (ofGetWidth() / 2) - (fontCountDown.stringWidth(str) / 2);
+    int x_lcd = (ofGetWidth() / 2) - (fontTimeLCD.stringWidth(str) / 2);
+    //x = (int)(x / 10) * 10;
+    
+    float timePassedSinceFinished = (ofGetElapsedTimef() - hideFinishedLabelStamp);
+    
+    if((raceStarted == true && elapsedTime < 7) ||
+       (raceStarted == false && (timePassedSinceFinished < HIDE_FINISHED_LABEL_COUNT_SEC))) {
+        drawMiddleRowBox(myColorBGMiddle);
+        float fontSize = fontCountDown.getFontSize();
+        drawString(&fontCountDown, myColorWhite, str, x, (ofGetHeight()/2) + (fontSize/1.5) - WATCH_OFFSET_Y);
+    } else if( raceStarted ){
+        drawStringWithShadow(&fontTimeLCD, myColorWhite, myColorBGDark, str, x_lcd, ofGetHeight() - 20 - WATCH_OFFSET_Y);
+    }
 }
 
 //--------------------------------------------------------------
@@ -1182,7 +1259,7 @@ void drawInfo() {
     // logo
     if (tvpScene == SCENE_CAMS || overlayMode == OVLMODE_HELP || overlayMode == OVLMODE_RCRSLT) {
         ofSetColor(myColorWhite);
-        logoSmallImage.draw(0, 0);
+        
         // appinfo
         str = ofToString(APP_VER);
         drawStringWithShadow(&myFontInfo1p, myColorWhite, myColorBGMiddle, str, 4, y);
@@ -1191,6 +1268,8 @@ void drawInfo() {
         x = ofGetWidth() - myFontInfo1m.stringWidth(str);
         x = (int)(x / 5) * 5;
         drawStringWithShadow(&myFontInfo1m, myColorWhite, myColorBGMiddle, str, x, y);
+        
+        logoSmallImage.draw(x/2 - 50, y - 170);
     }
 }
 
@@ -1372,13 +1451,29 @@ void keyPressedOverlayNone(int key) {
     }
     else if (ofGetKeyPressed(TVP_KEY_ALT)) {
         if (key == '1') {
-            toggleCameraVisibility(1);
+            if( DEBUG_ENABLED ){
+                debugCamIndex = 0;
+            } else {
+                toggleCameraVisibility(1);
+            }
         } else if (key == '2') {
-            toggleCameraVisibility(2);
+            if( DEBUG_ENABLED ){
+                debugCamIndex = 1;
+            } else {
+                toggleCameraVisibility(2);
+            }
         } else if (key == '3') {
-            toggleCameraVisibility(3);
+            if( DEBUG_ENABLED ){
+                debugCamIndex = 2;
+            } else {
+                toggleCameraVisibility(3);
+            }
         } else if (key == '4') {
-            toggleCameraVisibility(4);
+            if( DEBUG_ENABLED ){
+                debugCamIndex = 3;
+            }  else {
+                toggleCameraVisibility(4);
+            }
         } else if (key == '5' || key == 'z' || key == 'Z') {
             popLapRecord(1);
         } else if (key == '6') {
@@ -1388,6 +1483,21 @@ void keyPressedOverlayNone(int key) {
         } else if (key == '8') {
             popLapRecord(4);
         }
+        
+//        switch (key) {
+//            case '1':
+//                    debugCamIndex = 0;
+//                    break;
+//            case '2':
+//                    debugCamIndex = 1;
+//                    break;
+//            case '3':
+//                    debugCamIndex = 2;
+//                    break;
+//            case '4':
+//                    debugCamIndex = 3;
+//                    break;
+//        }
     } else {
         if (key == '1') {
             toggleCameraSolo(1);
@@ -1474,6 +1584,15 @@ void keyPressedOverlayNone(int key) {
             toggleConsecutiveMode();
         } else if (key == '~') {
             setupCamCheck();
+        } else if(key == '+') {
+            if (DEBUG_ENABLED == true) {
+                float lapTime = rnd(20.0f, 60.0f);
+                camView[debugCamIndex].lapHistLapTime[camView[debugCamIndex].totalLaps-1] += lapTime;
+                camView[debugCamIndex].totalLaps += 1;
+                camView[debugCamIndex].lastLapTime += lapTime;
+                debugCamLapIndex[debugCamIndex] += 1;
+                updateRacePositions();
+            }
         }
     }
 }
@@ -1763,6 +1882,9 @@ void setupColors() {
     myColorBGMiddle = ofColor(COLOR_BG_MIDDLE);
     myColorBGLight = ofColor(COLOR_BG_LIGHT);
     myColorAlert = ofColor(COLOR_ALERT);
+    myColorStatA = ofColor(COLOR_STAT_A);
+    myColorStatB = ofColor(COLOR_STAT_B);
+    
     // pilot
     for (int i = 0; i < CAMERA_MAXNUM; i++) {
         switch(i) {
@@ -2717,6 +2839,7 @@ void stopRace(bool appexit) {
             speakAny("en", "race finished.");
         }
         raceResultTimer = ARAP_RSLT_DELAY;
+        hideFinishedLabelStamp = ofGetElapsedTimef();
     }
     fwriteRaceResult();
     updateHeatStats(camView, cameraNum, minLapTime, useStartGate);
@@ -3360,7 +3483,7 @@ void generateDummyData() {
     camView[1].totalLaps = ARAP_MAX_RLAPS / 2;
     camView[2].totalLaps = ARAP_MAX_RLAPS / 3;
     camView[3].totalLaps = ARAP_MAX_RLAPS / 4;
-    for (int i = 0; i < ARAP_MAX_RLAPS; i++) {
+    for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             camView[j].lapHistName[i] = camView[j].labelString + "_L" + ofToString(i);
             camView[j].lapHistLapTime[i] = 10 + (j * 0.1) + (i * 0.01);
@@ -3553,11 +3676,11 @@ void drawRaceResult(int pageidx) {
 
     // message
     line = OVLTXT_LINES - 1;
-    if (pages > 1 && (pageidx + 1) < pages) {
-        str = "Press R key to continue, Esc key to exit";
-    } else {
-        str = "Press R or Esc key to exit";
-    }
+//    if (pages > 1 && (pageidx + 1) < pages) {
+//        str = "Press R key to continue, Esc key to exit";
+//    } else {
+//        str = "Press R or Esc key to exit";
+//    }
     ofSetColor(myColorYellow);
     drawStringBlock(&myFontOvlayP, str, 0, line, ALIGN_CENTER, 1, szl);
 }
